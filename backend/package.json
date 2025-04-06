@@ -1,0 +1,23 @@
+{
+	"name": "backend",
+	"module": "index.ts",
+	"type": "module",
+	"scripts": {
+		"dev": "ts-node-dev --respawn src/index.ts",
+		"build": "tsc",
+		"start": "node dist/index.js",
+		"migrate:dev": "npx prisma migrate dev",
+		"generate": "npx prisma generate"
+	},
+	"devDependencies": {
+		"@types/bun": "latest"
+	},
+	"peerDependencies": {
+		"typescript": "^5.0.0"
+	},
+	"dependencies": {
+		"@prisma/client": "^6.5.0",
+		"fastify": "^5.2.2",
+		"prisma": "^6.5.0"
+	}
+}
