@@ -1,15 +1,23 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/// <reference types="typescript" />
+
+declare global {
+	interface Window {
+		whatsappContacts?: Map<string, any>
+	}
+}
+
 ;(function () {
 	const contactsMap = new Map()
-	let processedContactsCount = 0
 	const CONTACT_HEIGHT = 72
 
 	const scrollPane = document.getElementById('pane-side')
-	if (!scrollPane) {
+	if (!scrollPane || scrollPane === null) {
 		console.error('Chat list pane not found!')
 		return
 	}
 
-	function simulateRealClick(element) {
+	function simulateRealClick(element: any) {
 		if (!element) return false
 
 		const rect = element.getBoundingClientRect()
@@ -69,7 +77,7 @@
 		}
 	}
 
-	function convertTimestampToDate(timestamp) {
+	function convertTimestampToDate(timestamp: string) {
 		if (!timestamp || timestamp === 'Unknown') return null
 
 		const now = new Date()
@@ -126,19 +134,19 @@
 		const contactElements = document.querySelectorAll('div[role="listitem"]')
 
 		let newContactsFound = 0
-		let contactsList = []
+		const contactsList: any = []
 
 		contactElements.forEach((element) => {
 			try {
 				// Find the name element within the contact - look for span with title attribute
 				const nameElement = element.querySelector('span[dir="auto"][title]')
 				if (nameElement) {
-					const contactName = nameElement.textContent.trim()
+					const contactName = nameElement.textContent?.trim()
 
 					// Extract timestamp (last interaction date)
 					const allDivs = element.querySelectorAll('div')
 					const timestampElement = [...allDivs].find((el) => {
-						const text = el.textContent.trim()
+						const text = el.textContent?.trim() ?? ''
 						return (
 							/^\d{1,2}:\d{2}$/.test(text) || // Time e.g., 09:45
 							/^(Yesterday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$/.test(
@@ -149,7 +157,7 @@
 					})
 
 					const timestampText =
-						timestampElement?.textContent.trim() || 'Unknown'
+						timestampElement?.textContent?.trim() || 'Unknown'
 					const lastInteractionDate = convertTimestampToDate(timestampText)
 
 					// Store both the original text and the converted date
@@ -193,9 +201,8 @@
 	}
 
 	async function extractMessages() {
-		const messages = []
+		const messages: { id: string; text: string; direction: string }[] = []
 		const MAX_MESSAGES = 20 // Maximum number of messages to collect
-		const MAX_SCROLL_ATTEMPTS = 5 // Maximum number of scroll attempts
 		const SCROLL_DELAY = 1500 // Increased delay after scrolling (1.5 seconds)
 		const LOAD_CHECK_INTERVAL = 300 // Check for new messages every 300ms
 		const MAX_LOAD_WAIT = 1000 // Maximum time to wait for messages to load (5 seconds)
@@ -217,7 +224,8 @@
 			}
 
 			function extractVisibleMessages() {
-				const messageRows = copyableArea.querySelectorAll('div[role="row"]')
+				const messageRows =
+					copyableArea?.querySelectorAll('div[role="row"]') ?? []
 				const newMessages = []
 
 				// Process in reverse order (bottom to top)
@@ -245,7 +253,7 @@
 						)
 						if (!textElement) continue
 
-						const text = textElement.textContent.trim()
+						const text = textElement.textContent?.trim()
 
 						// Add the message to our collection
 						if (text) {
@@ -268,12 +276,15 @@
 			}
 
 			function scrollUp() {
-				const previousScrollTop = scrollableContainer.scrollTop
-
-				// Use a smaller scroll amount for more controlled scrolling
-				const scrollAmount = 800 // Reduced from 1000 to 800
-
 				try {
+					if (!scrollableContainer?.scrollTop) {
+						throw new Error('scrollTop is not defined')
+					}
+					const previousScrollTop = scrollableContainer.scrollTop
+
+					// Use a smaller scroll amount for more controlled scrolling
+					const scrollAmount = 800 // Reduced from 1000 to 800
+
 					// Method 1: Direct scrollTop manipulation
 					scrollableContainer.scrollTop -= scrollAmount
 
@@ -284,22 +295,23 @@
 							behavior: 'auto',
 						})
 					}
+
+					// Check if scroll was successful
+					const scrolled = scrollableContainer.scrollTop !== previousScrollTop
+					const actualScrollAmount =
+						previousScrollTop - scrollableContainer.scrollTop
+
+					return { scrolled, scrollAmount: actualScrollAmount }
 				} catch (error) {
 					console.error('Error during scroll:', error)
+          return { scrolled: false, scrollAmount: 0 }
 				}
-
-				// Check if scroll was successful
-				const scrolled = scrollableContainer.scrollTop !== previousScrollTop
-				const actualScrollAmount =
-					previousScrollTop - scrollableContainer.scrollTop
-
-				return { scrolled, scrollAmount: actualScrollAmount }
 			}
 
-			async function waitForMessagesToLoad(previousMessageCount) {
+			async function waitForMessagesToLoad(previousMessageCount: number) {
 				const startTime = Date.now()
 				let currentMessageCount =
-					copyableArea.querySelectorAll('div[role="row"]').length
+					copyableArea?.querySelectorAll('div[role="row"]').length ?? 0
 
 				while (
 					currentMessageCount <= previousMessageCount &&
@@ -309,7 +321,7 @@
 						setTimeout(resolve, LOAD_CHECK_INTERVAL)
 					)
 					currentMessageCount =
-						copyableArea.querySelectorAll('div[role="row"]').length
+						copyableArea?.querySelectorAll('div[role="row"]').length ?? 0
 
 					// If we see new messages, give them a bit more time to fully load
 					if (currentMessageCount > previousMessageCount) {
@@ -322,8 +334,6 @@
 						break
 					}
 				}
-
-				const timeElapsed = Date.now() - startTime
 
 				return currentMessageCount
 			}
@@ -375,16 +385,16 @@
 		return messages
 	}
 
-	function isElementVisible(element, tolerance = 0.5) {
+	function isElementVisible(element: any, tolerance = 0.5) {
 		if (!element) return false
 
 		const rect = element.getBoundingClientRect()
-		const containerRect = scrollPane.getBoundingClientRect()
+		const containerRect = scrollPane?.getBoundingClientRect()
 
 		// Element is considered visible if at least 50% of its height is in the viewport
 		const visibleHeight =
-			Math.min(rect.bottom, containerRect.bottom) -
-			Math.max(rect.top, containerRect.top)
+			Math.min(rect.bottom, containerRect?.bottom ?? 0) -
+			Math.max(rect.top, containerRect?.top ?? 0)
 		const visibleRatio = visibleHeight / rect.height
 
 		return (
@@ -430,7 +440,6 @@
 		if (!clickTarget) {
 			console.error(`No clickable element found for contact: ${contactName}`)
 			contactToProcess.processed = true
-			processedContactsCount++
 			return true
 		}
 
@@ -439,7 +448,6 @@
 		if (!clickSuccess) {
 			console.error(`Failed to click on contact: ${contactName}`)
 			contactToProcess.processed = true
-			processedContactsCount++
 			return true
 		}
 
@@ -449,7 +457,6 @@
 		const messages = await extractMessages()
 		contactToProcess.messages = messages
 		contactToProcess.processed = true
-		processedContactsCount++
 
 		console.log(`Processed ${contactName}: ${messages.length} messages`)
 
@@ -459,24 +466,21 @@
 		return true
 	}
 
-	function performScroll() {
-		const previousScrollTop = scrollPane.scrollTop
+	async function performScroll() {
+		const previousScrollTop = scrollPane?.scrollTop
 
 		// Scroll by exactly 4 contact heights (4 × 72px = 288px)
 		const scrollAmount = 4 * CONTACT_HEIGHT
 
-		scrollPane.scrollBy({
+		scrollPane?.scrollBy({
 			top: scrollAmount,
 			behavior: 'auto', // Use 'auto' instead of 'smooth' for immediate scrolling
 		})
 
 		// Wait for the scroll to complete
-		setTimeout(() => {
-			// Check if we actually scrolled the expected amount
-			const actualScroll = scrollPane.scrollTop - previousScrollTop
-		}, 50)
+		await new Promise((resolve) => setTimeout(resolve, 100))
 
-		return scrollPane.scrollTop !== previousScrollTop
+		return scrollPane?.scrollTop !== previousScrollTop
 	}
 
 	async function scanContacts() {
@@ -509,7 +513,7 @@
 				}
 			}
 
-			const scrolled = performScroll()
+			const scrolled = await performScroll()
 
 			// Wait longer for content to load after scrolling
 			await new Promise((resolve) => setTimeout(resolve, 1600))
@@ -560,7 +564,12 @@
 		)
 
 		// Convert Map to a more readable object
-		const contactsObject = {}
+		const contactsObject: Record<string, { 
+			messageCount: number; 
+			messages: { id: string; text: string; direction: string }[]; 
+			processed: boolean; 
+			lastInteraction: { text: string; date: string | null }; 
+		}> = {}
 		contactsMap.forEach((data, name) => {
 			contactsObject[name] = {
 				messageCount: data.messages.length,
