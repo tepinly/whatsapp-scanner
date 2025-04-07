@@ -1,31 +1,21 @@
-// WhatsApp Contact and Message Scanner
 ;(function () {
-	// Map to store contacts and their messages
 	const contactsMap = new Map()
-
-	// Counter for processed contacts
 	let processedContactsCount = 0
-
-	// Contact height in pixels
 	const CONTACT_HEIGHT = 72
 
-	// Get the scrollable pane
 	const scrollPane = document.getElementById('pane-side')
 	if (!scrollPane) {
 		console.error('Chat list pane not found!')
 		return
 	}
 
-	// Function to simulate a real mouse click
 	function simulateRealClick(element) {
 		if (!element) return false
 
-		// Calculate element position for more realistic coordinates
 		const rect = element.getBoundingClientRect()
 		const centerX = rect.left + rect.width / 2
 		const centerY = rect.top + rect.height / 2
 
-		// Create event sequence
 		const events = [
 			new MouseEvent('mousemove', {
 				bubbles: true,
@@ -63,7 +53,6 @@
 			}),
 		]
 
-		// Dispatch events to the element at those coordinates
 		try {
 			events.forEach((event) => {
 				const targetElement = document.elementFromPoint(centerX, centerY)
@@ -80,7 +69,6 @@
 		}
 	}
 
-	// Function to extract contact names from current view
 	function extractContacts() {
 		// Find all contact elements in the chat list
 		const contactElements = document.querySelectorAll('div[role="listitem"]')
@@ -95,7 +83,6 @@
 				if (nameElement) {
 					const contactName = nameElement.textContent.trim()
 
-					// Add to map if not already present
 					if (!contactsMap.has(contactName) && contactName) {
 						// Find the specific div with tabindex="-1"
 						const clickableDiv = element.querySelector('div[tabindex="-1"]')
@@ -126,11 +113,13 @@
 		return { newContactsFound, contactsList }
 	}
 
-	// Function to extract messages from an open chat
 	async function extractMessages() {
 		const messages = []
 		const MAX_MESSAGES = 20 // Maximum number of messages to collect
 		const MAX_SCROLL_ATTEMPTS = 5 // Maximum number of scroll attempts
+		const SCROLL_DELAY = 1500 // Increased delay after scrolling (1.5 seconds)
+		const LOAD_CHECK_INTERVAL = 300 // Check for new messages every 300ms
+		const MAX_LOAD_WAIT = 1000 // Maximum time to wait for messages to load (5 seconds)
 
 		try {
 			// Find the copyable area that contains messages
@@ -148,7 +137,6 @@
 				return messages
 			}
 
-			// Function to extract visible messages
 			function extractVisibleMessages() {
 				const messageRows = copyableArea.querySelectorAll('div[role="row"]')
 				const newMessages = []
@@ -180,21 +168,6 @@
 
 						const text = textElement.textContent.trim()
 
-						// Try to get the date from data-pre-plain-text attribute
-						let date = 'Unknown date'
-						const prePlainTextElement = row.querySelector(
-							'.copyable-text[data-pre-plain-text]'
-						)
-						if (prePlainTextElement) {
-							const prePlainText = prePlainTextElement.getAttribute(
-								'data-pre-plain-text'
-							)
-							const dateMatch = prePlainText.match(/\[(.*?),/)
-							if (dateMatch && dateMatch[1]) {
-								date = dateMatch[1].trim()
-							}
-						}
-
 						// Add the message to our collection
 						if (text) {
 							newMessages.push({
@@ -204,7 +177,6 @@
 										.toString(36)
 										.substr(2, 9)}`,
 								text: text,
-								date: date,
 								direction: direction,
 							})
 						}
@@ -216,36 +188,22 @@
 				return newMessages
 			}
 
-			// Function to scroll up in the message container
 			function scrollUp() {
 				const previousScrollTop = scrollableContainer.scrollTop
 
-				// Try multiple scroll methods
+				// Use a smaller scroll amount for more controlled scrolling
+				const scrollAmount = 800 // Reduced from 1000 to 800
+
 				try {
 					// Method 1: Direct scrollTop manipulation
-					scrollableContainer.scrollTop -= 1000
+					scrollableContainer.scrollTop -= scrollAmount
 
 					// Method 2: If that didn't work, try scrollBy
 					if (scrollableContainer.scrollTop === previousScrollTop) {
-						scrollableContainer.scrollBy(0, -1000)
-					}
-
-					// Method 3: If that still didn't work, try with JavaScript scroll function
-					if (scrollableContainer.scrollTop === previousScrollTop) {
-						scrollableContainer.scroll({
-							top: scrollableContainer.scrollTop - 1000,
+						scrollableContainer.scrollBy({
+							top: -scrollAmount,
 							behavior: 'auto',
 						})
-					}
-
-					// Method 4: Last resort - try to find the first message and scroll to it
-					if (scrollableContainer.scrollTop === previousScrollTop) {
-						const firstMessage = scrollableContainer.querySelector(
-							'div[role="row"]:first-child'
-						)
-						if (firstMessage) {
-							firstMessage.scrollIntoView({ block: 'start', behavior: 'auto' })
-						}
 					}
 				} catch (error) {
 					console.error('Error during scroll:', error)
@@ -253,57 +211,84 @@
 
 				// Check if scroll was successful
 				const scrolled = scrollableContainer.scrollTop !== previousScrollTop
-				console.log(
-					`Scrolled up by ${
-						previousScrollTop - scrollableContainer.scrollTop
-					}px, success: ${scrolled}`
-				)
+				const actualScrollAmount =
+					previousScrollTop - scrollableContainer.scrollTop
 
-				return scrolled
+				return { scrolled, scrollAmount: actualScrollAmount }
 			}
 
-			// Initial extraction of visible messages
+			async function waitForMessagesToLoad(previousMessageCount) {
+				const startTime = Date.now()
+				let currentMessageCount =
+					copyableArea.querySelectorAll('div[role="row"]').length
+
+				while (
+					currentMessageCount <= previousMessageCount &&
+					Date.now() - startTime < MAX_LOAD_WAIT
+				) {
+					await new Promise((resolve) =>
+						setTimeout(resolve, LOAD_CHECK_INTERVAL)
+					)
+					currentMessageCount =
+						copyableArea.querySelectorAll('div[role="row"]').length
+
+					// If we see new messages, give them a bit more time to fully load
+					if (currentMessageCount > previousMessageCount) {
+						console.log(
+							`New messages detected: ${
+								currentMessageCount - previousMessageCount
+							} new messages`
+						)
+						await new Promise((resolve) => setTimeout(resolve, 1600)) // Additional 1600ms for rendering
+						break
+					}
+				}
+
+				const timeElapsed = Date.now() - startTime
+
+				return currentMessageCount
+			}
+
 			let newMessages = extractVisibleMessages()
 			messages.push(...newMessages)
-			console.log(`Initially extracted ${newMessages.length} messages`)
 
 			// Scroll up and extract more messages until we have enough or can't scroll further
-			let scrollAttempts = 0
+			// let scrollAttempts = 0
+			let consecutiveEmptyScrolls = 0
+
 			while (
 				messages.length < MAX_MESSAGES &&
-				scrollAttempts < MAX_SCROLL_ATTEMPTS
+				// scrollAttempts < MAX_SCROLL_ATTEMPTS &&
+				consecutiveEmptyScrolls < 2
 			) {
-				// Scroll up to load more messages
-				const scrolled = scrollUp()
-				if (!scrolled) {
-					console.log('Cannot scroll up further')
+				// Get current message count before scrolling
+				const previousMessageCount =
+					copyableArea.querySelectorAll('div[role="row"]').length
+
+				const { scrolled, scrollAmount } = scrollUp()
+				if (!scrolled || scrollAmount < 10) {
 					break
 				}
 
-				// Wait for new messages to load
-				await new Promise((resolve) => setTimeout(resolve, 1000))
+				// Wait for the initial delay after scrolling
+				await new Promise((resolve) => setTimeout(resolve, SCROLL_DELAY))
+				await waitForMessagesToLoad(previousMessageCount)
 
-				// Extract newly visible messages
 				newMessages = extractVisibleMessages()
-				messages.push(...newMessages)
 
-				console.log(
-					`Extracted ${newMessages.length} more messages. Total: ${messages.length}`
-				)
-				scrollAttempts++
-
-				// If we didn't get any new messages, try one more time then stop
-				if (newMessages.length === 0) {
-					scrollAttempts++
+				if (newMessages.length > 0) {
+					messages.push(...newMessages)
+					consecutiveEmptyScrolls = 0
+				} else {
+					consecutiveEmptyScrolls++
 				}
+
+				// scrollAttempts++
 			}
 
-			// Limit to MAX_MESSAGES
 			if (messages.length > MAX_MESSAGES) {
 				messages.splice(MAX_MESSAGES)
 			}
-
-			console.log(`Finished extracting ${messages.length} messages`)
 		} catch (error) {
 			console.error('Error extracting messages:', error)
 		}
@@ -311,7 +296,6 @@
 		return messages
 	}
 
-	// Function to check if an element is visible in the viewport with tolerance
 	function isElementVisible(element, tolerance = 0.5) {
 		if (!element) return false
 
@@ -331,7 +315,6 @@
 		)
 	}
 
-	// Function to get all currently visible contacts
 	function getVisibleContacts() {
 		const visibleContacts = []
 
@@ -351,13 +334,11 @@
 		return visibleContacts
 	}
 
-	// Function to process a single visible contact
 	async function processVisibleContact() {
-		// Get all visible contacts sorted by position
 		const visibleContacts = getVisibleContacts()
 
 		if (visibleContacts.length === 0) {
-			return false // No visible, unprocessed contacts found
+			return false
 		}
 
 		// Process the topmost visible contact
@@ -371,10 +352,8 @@
 			console.error(`No clickable element found for contact: ${contactName}`)
 			contactToProcess.processed = true
 			processedContactsCount++
-			return true // Continue with next contact
+			return true
 		}
-
-		console.log(`Attempting to click on contact: ${contactName}`)
 
 		const clickSuccess = simulateRealClick(clickTarget)
 
@@ -382,62 +361,53 @@
 			console.error(`Failed to click on contact: ${contactName}`)
 			contactToProcess.processed = true
 			processedContactsCount++
-			return true // Continue with next contact
+			return true
 		}
 
 		// Wait for chat to load
-		await new Promise((resolve) => setTimeout(resolve, 2000))
+		await new Promise((resolve) => setTimeout(resolve, 1000))
 
-		// Extract messages with timestamps
-		const messages = extractMessages()
+		const messages = await extractMessages()
 		contactToProcess.messages = messages
 		contactToProcess.processed = true
 		processedContactsCount++
 
 		console.log(
-			`Processed ${contactName}: ${messages.length} messages (${processedContactsCount} total)`
+			`Processed ${contactName}: ${messages.length} messages`
 		)
 
 		// Wait a bit before processing the next contact
 		await new Promise((resolve) => setTimeout(resolve, 500))
 
-		return true // Processed a contact successfully
+		return true
 	}
 
-	// Function to perform a controlled scroll
 	function performScroll() {
 		const previousScrollTop = scrollPane.scrollTop
 
 		// Scroll by exactly 4 contact heights (4 × 72px = 288px)
 		const scrollAmount = 4 * CONTACT_HEIGHT
 
-		// Use scrollBy for more precise scrolling
 		scrollPane.scrollBy({
 			top: scrollAmount,
 			behavior: 'auto', // Use 'auto' instead of 'smooth' for immediate scrolling
 		})
 
-		// Wait a tiny bit for the scroll to complete
+		// Wait for the scroll to complete
 		setTimeout(() => {
 			// Check if we actually scrolled the expected amount
 			const actualScroll = scrollPane.scrollTop - previousScrollTop
-			console.log(
-				`Attempted to scroll by ${scrollAmount}px, actually scrolled by ${actualScroll}px`
-			)
 		}, 50)
 
-		// Return true if scroll was successful (any amount of scrolling)
 		return scrollPane.scrollTop !== previousScrollTop
 	}
 
-	// Main scanning function
 	async function scanContacts() {
 		let scanning = true
 		let noNewContactsCount = 0
 		let noScrollCount = 0
 
 		while (scanning) {
-			// Extract contacts in current view
 			const { newContactsFound } = extractContacts()
 
 			if (newContactsFound > 0) {
@@ -447,7 +417,6 @@
 				noNewContactsCount = 0
 			}
 
-			// Process contacts until we need to scroll
 			let contactsProcessedInThisBatch = 0
 			let shouldScroll = false
 
@@ -463,10 +432,6 @@
 				}
 			}
 
-			// Scroll after processing 4 contacts or when no more visible contacts
-			console.log(
-				`Processed ${contactsProcessedInThisBatch} contacts in this batch. Scrolling down...`
-			)
 			const scrolled = performScroll()
 
 			// Wait longer for content to load after scrolling
@@ -487,7 +452,6 @@
 				noScrollCount = 0
 			}
 
-			// Check if we're not finding any new contacts
 			if (getVisibleContacts().length === 0) {
 				noNewContactsCount++
 
@@ -511,7 +475,6 @@
 
 		console.log(`Scanning complete! Total contacts found: ${contactsMap.size}`)
 
-		// Count processed contacts
 		const processedCount = Array.from(contactsMap.values()).filter(
 			(data) => data.processed && data.messages.length > 0
 		).length
@@ -531,7 +494,6 @@
 
 		console.log('Contacts and messages:', contactsObject)
 
-		// Save to localStorage for persistence
 		try {
 			localStorage.setItem(
 				'whatsappContactsData',
@@ -545,7 +507,6 @@
 		}
 	}
 
-	// Start the scanning process
 	scanContacts()
 
 	// Expose the contacts map to the console for easy access
