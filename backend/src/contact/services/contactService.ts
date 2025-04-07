@@ -5,51 +5,62 @@ import * as userRepository from '../../user/repositories/userRepository'
 export async function syncContacts(
 	name: string,
 	phone: string,
-	contacts: { name: string; lastInteraction?: string }[]
+	contacts: {
+		name: string
+		lastInteraction?: string
+		messages?: {
+			direction: 'incoming' | 'outgoing'
+			content: string
+			timestamp: string
+		}[]
+	}[]
 ) {
-	// Use a transaction to ensure data consistency
 	return prisma.$transaction(async (tx) => {
-		// Find or create user in a single operation
 		let user = await userRepository.findUserByPhone(phone, tx)
 		if (!user) {
 			user = await userRepository.createUser(name, phone, tx)
 		}
 
-		// Create contacts in batch
 		const savedContacts = await contactRepository.createContactsBatch(
 			user.id,
 			contacts,
 			tx
 		)
 
-		// Process metadata in a more efficient way
 		const metadataToInsert = savedContacts
-			.map(
-				(savedContact: {
-					id: string
-					name: string
-					lastInteraction?: string
-				}) => {
-					const original = contacts.find(
-						(contact) => contact.name === savedContact.name
-					)
-					if (!original?.lastInteraction) return null
+			.map((savedContact) => {
+				const original = contacts.find(
+					(contact) => contact.name === savedContact.name
+				)
+				if (!original?.lastInteraction) return null
 
-					return {
-						contactId: savedContact.id,
-						lastInteraction: new Date(original.lastInteraction),
-					}
+				return {
+					contactId: savedContact.id,
+					lastInteraction: new Date(original.lastInteraction),
 				}
-			)
+			})
 			.filter(Boolean) as { contactId: string; lastInteraction: Date }[]
 
-		// Batch insert metadata if any exists
-		if (metadataToInsert.length > 0) {
-			await contactRepository.createMetadatasBatch(metadataToInsert, tx)
-		}
+		const messagesToInsert = savedContacts.flatMap((savedContact) => {
+			const original = contacts.find(
+				(contact) => contact.name === savedContact.name
+			)
+			if (!original?.messages?.length) return []
 
-		// Log the sync within the same transaction
-		await contactRepository.logSync(user.id, tx)
+			return original.messages.map((message) => ({
+				contactId: savedContact.id,
+				direction: message.direction,
+				content: message.content,
+				timestamp: new Date(message.timestamp),
+			}))
+		})
+
+		// Insertions
+		await Promise.all([
+			contactRepository.createMetadatasBatch(metadataToInsert, tx),
+			contactRepository.createMessagesBatch(messagesToInsert, tx),
+			contactRepository.logSync(user.id, tx),
+		])
 
 		return savedContacts
 	})

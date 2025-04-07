@@ -68,3 +68,18 @@ export async function logSync(userId: string, tx?: Prisma.TransactionClient) {
 		},
 	})
 }
+
+export async function createMessagesBatch(
+  messages: {
+    contactId: string
+    direction: 'incoming' | 'outgoing'
+    content: string
+    timestamp: Date
+  }[],
+  tx?: Prisma.TransactionClient
+) {
+  const client = tx || prisma
+  return client.message.createMany({
+    data: messages,
+  })
+}

@@ -24,10 +24,27 @@ model Contact {
   name       String
   profilePic String?
   metadata   Metadata?
+  messages   Message[]
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
   @@unique([userId, name])
+}
+
+model Message {
+  id        String           @id @default(uuid())
+  contact   Contact          @relation(fields: [contactId], references: [id])
+  contactId String
+  direction MessageDirection
+  content   String
+  timestamp DateTime
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+}
+
+enum MessageDirection {
+  incoming
+  outgoing
 }
 
 model Metadata {
