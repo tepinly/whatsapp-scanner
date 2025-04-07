@@ -69,6 +69,58 @@
 		}
 	}
 
+	function convertTimestampToDate(timestamp) {
+		if (!timestamp || timestamp === 'Unknown') return null
+
+		const now = new Date()
+		const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+		// Case 1: Time format (e.g., "09:45")
+		if (/^\d{1,2}:\d{2}$/.test(timestamp)) {
+			const [hours, minutes] = timestamp.split(':').map(Number)
+			const date = new Date(today)
+			date.setHours(hours, minutes, 0, 0)
+			return date
+		}
+
+		// Case 2: "Yesterday"
+		if (timestamp === 'Yesterday') {
+			const yesterday = new Date(today)
+			yesterday.setDate(yesterday.getDate() - 1)
+			return yesterday
+		}
+
+		// Case 3: Day of week (e.g., "Monday", "Tuesday", etc.)
+		const daysOfWeek = [
+			'Sunday',
+			'Monday',
+			'Tuesday',
+			'Wednesday',
+			'Thursday',
+			'Friday',
+			'Saturday',
+		]
+		const dayIndex = daysOfWeek.indexOf(timestamp)
+
+		if (dayIndex !== -1) {
+			const currentDayIndex = today.getDay()
+			let daysAgo = currentDayIndex - dayIndex
+			if (daysAgo <= 0) daysAgo += 7
+
+			const date = new Date(today)
+			date.setDate(date.getDate() - daysAgo)
+			return date
+		}
+
+		// Case 4: Date format (e.g., "30/03/2025" or "30/03/2023")
+		if (/^\d{2}\/\d{2}\/\d{4}$/.test(timestamp)) {
+			const [day, month, year] = timestamp.split('/').map(Number)
+			return new Date(year, month - 1, day) // month is 0-indexed in JavaScript Date
+		}
+
+		return null
+	}
+
 	function extractContacts() {
 		// Find all contact elements in the chat list
 		const contactElements = document.querySelectorAll('div[role="listitem"]')
@@ -83,6 +135,31 @@
 				if (nameElement) {
 					const contactName = nameElement.textContent.trim()
 
+					// Extract timestamp (last interaction date)
+					const allDivs = element.querySelectorAll('div')
+					const timestampElement = [...allDivs].find((el) => {
+						const text = el.textContent.trim()
+						return (
+							/^\d{1,2}:\d{2}$/.test(text) || // Time e.g., 09:45
+							/^(Yesterday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$/.test(
+								text
+							) || // Day e.g., Yesterday, Monday
+							/^\d{2}\/\d{2}\/\d{4}$/.test(text) // Date e.g., 30/03/2025
+						)
+					})
+
+					const timestampText =
+						timestampElement?.textContent.trim() || 'Unknown'
+					const lastInteractionDate = convertTimestampToDate(timestampText)
+
+					// Store both the original text and the converted date
+					const lastInteraction = {
+						text: timestampText,
+						date: lastInteractionDate
+							? lastInteractionDate.toISOString()
+							: null,
+					}
+
 					if (!contactsMap.has(contactName) && contactName) {
 						// Find the specific div with tabindex="-1"
 						const clickableDiv = element.querySelector('div[tabindex="-1"]')
@@ -93,6 +170,7 @@
 							messages: [],
 							processed: false,
 							position: element.getBoundingClientRect().top, // Store current position
+							lastInteraction: lastInteraction, // Add the last interaction timestamp
 						})
 						newContactsFound++
 						contactsList.push(contactName)
@@ -103,6 +181,7 @@
 						existingData.clickableDiv =
 							element.querySelector('div[tabindex="-1"]')
 						existingData.position = element.getBoundingClientRect().top
+						existingData.lastInteraction = lastInteraction // Update the timestamp
 					}
 				}
 			} catch (error) {
@@ -372,9 +451,7 @@
 		contactToProcess.processed = true
 		processedContactsCount++
 
-		console.log(
-			`Processed ${contactName}: ${messages.length} messages`
-		)
+		console.log(`Processed ${contactName}: ${messages.length} messages`)
 
 		// Wait a bit before processing the next contact
 		await new Promise((resolve) => setTimeout(resolve, 500))
@@ -489,6 +566,7 @@
 				messageCount: data.messages.length,
 				messages: data.messages,
 				processed: data.processed,
+				lastInteraction: data.lastInteraction,
 			}
 		})
 
