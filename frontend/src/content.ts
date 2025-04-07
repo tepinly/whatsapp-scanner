@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /// <reference types="typescript" />
 
-
 declare global {
 	interface Window {
 		whatsappContacts?: Map<string, any>
@@ -10,7 +9,7 @@ declare global {
 }
 
 function initWhatsAppScanner() {
-  console.log('🔍 Scanner running')
+	console.log('🔍 Scanner running')
 	const contactsMap = new Map()
 	const CONTACT_HEIGHT = 72
 
@@ -607,7 +606,7 @@ function initWhatsAppScanner() {
 	)
 }
 
-console.log('WhatsApp scanner content script loaded');
+console.log('WhatsApp scanner content script loaded')
 
 initWhatsAppScanner()
 window.runWhatsAppScanner = initWhatsAppScanner

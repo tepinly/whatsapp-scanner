@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite'
+import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
 	build: {
@@ -7,7 +8,9 @@ export default defineConfig({
 			input: {
 				background: './src/background.ts',
 				content: './src/content.ts',
-				popup: './src/popup.ts',
+				main: './src/main.tsx',
+				App: './src/App.tsx',
+				styles: './src/styles.css',
 			},
 			output: {
 				entryFileNames: '[name].js',
@@ -16,5 +19,5 @@ export default defineConfig({
 			},
 		},
 	},
-	plugins: [],
+	plugins: [tailwindcss()],
 })
