@@ -7,11 +7,12 @@ export default defineConfig({
 			input: {
 				background: './src/background.ts',
 				content: './src/content.ts',
+				popup: './src/popup.ts',
 			},
 			output: {
-				entryFileNames: 'assets/[name].js',
-				chunkFileNames: 'assets/[name].js',
-				assetFileNames: 'assets/[name].[ext]',
+				entryFileNames: '[name].js',
+				chunkFileNames: '[name].js',
+				assetFileNames: '[name].[ext]',
 			},
 		},
 	},

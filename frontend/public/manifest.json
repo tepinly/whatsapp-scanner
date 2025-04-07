@@ -8,12 +8,12 @@
 		"default_popup": "popup.html"
 	},
 	"background": {
-		"service_worker": "assets/background.js"
+		"service_worker": "background.js"
 	},
 	"content_scripts": [
 		{
 			"matches": ["https://web.whatsapp.com/*"],
-			"js": ["assets/content.js"]
+			"js": ["content.js"]
 		}
 	]
 }

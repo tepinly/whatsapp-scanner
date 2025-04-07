@@ -1,13 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /// <reference types="typescript" />
 
+
 declare global {
 	interface Window {
 		whatsappContacts?: Map<string, any>
+		runWhatsAppScanner?: () => void
 	}
 }
 
-;(function () {
+function initWhatsAppScanner() {
+  console.log('🔍 Scanner running')
 	const contactsMap = new Map()
 	const CONTACT_HEIGHT = 72
 
@@ -304,7 +307,7 @@ declare global {
 					return { scrolled, scrollAmount: actualScrollAmount }
 				} catch (error) {
 					console.error('Error during scroll:', error)
-          return { scrolled: false, scrollAmount: 0 }
+					return { scrolled: false, scrollAmount: 0 }
 				}
 			}
 
@@ -492,9 +495,6 @@ declare global {
 			const { newContactsFound } = extractContacts()
 
 			if (newContactsFound > 0) {
-				console.log(
-					`Found ${newContactsFound} new contacts. Total: ${contactsMap.size}`
-				)
 				noNewContactsCount = 0
 			}
 
@@ -564,12 +564,15 @@ declare global {
 		)
 
 		// Convert Map to a more readable object
-		const contactsObject: Record<string, { 
-			messageCount: number; 
-			messages: { id: string; text: string; direction: string }[]; 
-			processed: boolean; 
-			lastInteraction: { text: string; date: string | null }; 
-		}> = {}
+		const contactsObject: Record<
+			string,
+			{
+				messageCount: number
+				messages: { id: string; text: string; direction: string }[]
+				processed: boolean
+				lastInteraction: { text: string; date: string | null }
+			}
+		> = {}
 		contactsMap.forEach((data, name) => {
 			contactsObject[name] = {
 				messageCount: data.messages.length,
@@ -602,4 +605,9 @@ declare global {
 	console.log(
 		'WhatsApp contact and message scanner started. Access data with window.whatsappContacts'
 	)
-})()
+}
+
+console.log('WhatsApp scanner content script loaded');
+
+initWhatsAppScanner()
+window.runWhatsAppScanner = initWhatsAppScanner
