@@ -36,9 +36,14 @@ export async function syncContacts(
 				return {
 					contactId: savedContact.id,
 					lastInteraction: new Date(original.lastInteraction),
+					messageCount: original.messages?.length || 0,
 				}
 			})
-			.filter(Boolean) as { contactId: string; lastInteraction: Date }[]
+			.filter(Boolean) as {
+			contactId: string
+			lastInteraction: Date
+			messageCount: number
+		}[]
 
 		const messagesToInsert = savedContacts.flatMap((savedContact) => {
 			const original = contacts.find(

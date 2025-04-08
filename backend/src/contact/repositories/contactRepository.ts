@@ -45,7 +45,11 @@ export async function getUserContacts(
 
 // Create metadata in batch
 export async function createMetadatasBatch(
-	metadatas: { contactId: string; lastInteraction: Date }[],
+	metadatas: {
+		contactId: string
+		lastInteraction: Date
+		messageCount: number
+	}[],
 	tx?: Prisma.TransactionClient
 ) {
 	const client = tx || prisma
@@ -53,6 +57,7 @@ export async function createMetadatasBatch(
 		data: metadatas.map((metadata) => ({
 			contactId: metadata.contactId,
 			lastInteraction: metadata.lastInteraction,
+			messageCount: metadata.messageCount,
 		})),
 		skipDuplicates: true,
 	})
@@ -70,15 +75,15 @@ export async function logSync(userId: string, tx?: Prisma.TransactionClient) {
 }
 
 export async function createMessagesBatch(
-  messages: {
-    contactId: string
-    direction: 'incoming' | 'outgoing'
-    content: string
-  }[],
-  tx?: Prisma.TransactionClient
+	messages: {
+		contactId: string
+		direction: 'incoming' | 'outgoing'
+		content: string
+	}[],
+	tx?: Prisma.TransactionClient
 ) {
-  const client = tx || prisma
-  return client.message.createMany({
-    data: messages,
-  })
+	const client = tx || prisma
+	return client.message.createMany({
+		data: messages,
+	})
 }
