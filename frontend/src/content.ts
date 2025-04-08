@@ -328,11 +328,11 @@ function initWhatsAppScanner() {
 
 					// If we see new messages, give them a bit more time to fully load
 					if (currentMessageCount > previousMessageCount) {
-						console.log(
-							`New messages detected: ${
-								currentMessageCount - previousMessageCount
-							} new messages`
-						)
+						// console.log(
+						// 	`New messages detected: ${
+						// 		currentMessageCount - previousMessageCount
+						// 	} new messages`
+						// )
 						await new Promise((resolve) => setTimeout(resolve, 1600)) // Additional 1600ms for rendering
 						break
 					}
@@ -487,8 +487,6 @@ function initWhatsAppScanner() {
 	}
 
 	async function sendContactsToBackend(contactsObject: Record<string, any>) {
-		console.log('Starting sendContactsToBackend...')
-
 		if (!contactsObject || Object.keys(contactsObject).length === 0) {
 			console.error('No contacts to send!')
 			return
@@ -507,8 +505,6 @@ function initWhatsAppScanner() {
 					})) || [],
 			})),
 		}
-
-		console.log('Prepared payload:', JSON.stringify(payload, null, 2))
 
 		try {
 			const response = await fetch('http://localhost:3000/v1/sync', {
@@ -631,8 +627,6 @@ function initWhatsAppScanner() {
     } catch (error) {
         console.error('Failed to send contacts:', error)
     }
-
-    console.log('Attempting to save to localStorage...')
 
 		try {
 			localStorage.setItem(
