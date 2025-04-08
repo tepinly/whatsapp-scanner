@@ -123,12 +123,12 @@ export default function WhatsAppSync() {
 										</span>
 										{contact.lastInteraction && (
 											<div className="flex items-center text-xs text-zinc-400 gap-1">
-												<Calendar className="h-3 w-3" />
 												<span>
 													{new Date(
 														contact.lastInteraction
 													).toLocaleDateString()}
 												</span>
+												<Calendar className="h-3 w-3" />
 											</div>
 										)}
 									</div>
