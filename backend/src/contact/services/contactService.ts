@@ -11,7 +11,6 @@ export async function syncContacts(
 		messages?: {
 			direction: 'incoming' | 'outgoing'
 			content: string
-			timestamp: string
 		}[]
 	}[]
 ) {
@@ -51,7 +50,6 @@ export async function syncContacts(
 				contactId: savedContact.id,
 				direction: message.direction,
 				content: message.content,
-				timestamp: new Date(message.timestamp),
 			}))
 		})
 

@@ -74,7 +74,6 @@ export async function createMessagesBatch(
     contactId: string
     direction: 'incoming' | 'outgoing'
     content: string
-    timestamp: Date
   }[],
   tx?: Prisma.TransactionClient
 ) {

@@ -16,7 +16,6 @@ export default async function contactRoutesV1(fastify: FastifyInstance) {
 				messages?: {
 					direction: 'incoming' | 'outgoing'
 					content: string
-					timestamp: string
 				}[]
 			}[]
 		}

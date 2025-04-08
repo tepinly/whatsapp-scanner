@@ -30,7 +30,6 @@ CREATE TABLE "Message" (
     "contactId" TEXT NOT NULL,
     "direction" "MessageDirection" NOT NULL,
     "content" TEXT NOT NULL,
-    "timestamp" TIMESTAMP(3) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
