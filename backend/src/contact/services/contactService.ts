@@ -26,11 +26,13 @@ export async function syncContacts(
 			tx
 		)
 
+		const contactsMap = new Map(
+			contacts.map((contact) => [contact.name, contact])
+		)
+
 		const metadataToInsert = savedContacts
 			.map((savedContact) => {
-				const original = contacts.find(
-					(contact) => contact.name === savedContact.name
-				)
+				const original = contactsMap.get(savedContact.name)
 				if (!original?.lastInteraction) return null
 
 				return {
@@ -46,9 +48,7 @@ export async function syncContacts(
 		}[]
 
 		const messagesToInsert = savedContacts.flatMap((savedContact) => {
-			const original = contacts.find(
-				(contact) => contact.name === savedContact.name
-			)
+			const original = contactsMap.get(savedContact.name)
 			if (!original?.messages?.length) return []
 
 			return original.messages.map((message) => ({
