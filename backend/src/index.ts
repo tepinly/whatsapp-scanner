@@ -4,6 +4,9 @@ import contactsRoutesV1 from './contact/routes/v1/contacts'
 import { redis } from './cache/redis'
 import './workers/ContactSyncWorker'
 
+const host = process.env.HOST || '0.0.0.0'
+const port = +(process.env.PORT ?? 3000)
+
 const server = Fastify({ logger: true })
 
 await server.register(cors, {
@@ -21,9 +24,8 @@ await server.register(cors, {
 
 server.register(contactsRoutesV1, { prefix: '/v1' })
 
-server.listen({ port: 3000 }, (err, address) => {
-	if (err) throw err
-	console.log(`Server listening at ${address}`)
+server.listen({ port, host }, () => {
+	console.log(`Server listening on http://${host}:${port}`)
 })
 
 server.addHook('onClose', async () => {

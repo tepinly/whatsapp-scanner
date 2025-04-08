@@ -1,0 +1,77 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:15
+    container_name: whatsapp-sync-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: whatsapp-sync
+    ports:
+      - '5432:5432'
+    volumes:
+      - extension_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d whatsapp-sync']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    container_name: whatsapp-sync-redis
+    restart: always
+    ports:
+      - '6379:6379'
+    volumes:
+      - extension_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    container_name: whatsapp-sync-backend
+    build:
+      context: ./backend
+      args:
+        DATABASE_URL: postgres://postgres:postgres@db:5432/whatsapp-sync
+        REDIS_HOST: redis
+        REDIS_PORT: 6379
+    ports:
+      - '3000:3000'
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@db:5432/whatsapp-sync
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      HOST: 0.0.0.0
+      PORT: 3000
+    volumes:
+      - ./backend/src:/app/src
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+  
+  web:
+    container_name: whatsapp-sync-web
+    build:
+      context: ./webpage
+    ports:
+      - '5173:5173'
+    volumes:
+      - ./webpage/src:/app/src
+    environment:
+      - VITE_API_URL=http://backend:3000
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  extension_postgres_data:
+  extension_redis_data:
