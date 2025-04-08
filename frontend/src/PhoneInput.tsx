@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import * as countryCodes from 'country-codes-list'
 
 const countries = countryCodes.customList(
@@ -6,7 +6,11 @@ const countries = countryCodes.customList(
 	'[{countryCode}] {countryNameEn}: +{countryCallingCode}'
 )
 
-const PhoneInput = () => {
+interface PhoneInputProps {
+	onChange: (value: string) => void
+}
+
+const PhoneInput = ({ onChange }: PhoneInputProps) => {
 	const [selectedCode, setSelectedCode] = useState('+1')
 	const [phoneNumber, setPhoneNumber] = useState('')
 
@@ -21,9 +25,12 @@ const PhoneInput = () => {
 		})
 		.sort((a, b) => a.label.localeCompare(b.label))
 
+	useEffect(() => {
+		onChange(`${selectedCode}${phoneNumber}`)
+	}, [selectedCode, phoneNumber, onChange])
+
 	return (
 		<div className="flex items-center justify-between gap-2 w-full text-white mb-4">
-			{/* Country selector */}
 			<select
 				className="bg-black text-white border border-green-600 rounded px-2 py-2 text-sm focus:outline-none w-[35%]"
 				value={selectedCode}
@@ -36,17 +43,16 @@ const PhoneInput = () => {
 				))}
 			</select>
 
-			{/* Phone input with country code prefix inside */}
 			<div className="relative w-full">
 				<span className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500 text-sm">
 					{selectedCode}
 				</span>
 				<input
 					type="tel"
-					className="pl-16 pr-3 py-2 w-full bg-black text-white border border-green-600 rounded text-sm focus:outline-none"
-					placeholder="Phone number"
 					value={phoneNumber}
 					onChange={(e) => setPhoneNumber(e.target.value)}
+					className="pl-16 pr-3 py-2 w-full bg-black text-white border border-green-600 rounded text-sm focus:outline-none"
+					placeholder="Phone number"
 				/>
 			</div>
 		</div>

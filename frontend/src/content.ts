@@ -5,6 +5,7 @@ declare global {
 	interface Window {
 		whatsappContacts?: Map<string, any>
 		runWhatsAppScanner?: () => void
+		phoneNumber?: string // Add this line
 	}
 }
 
@@ -485,6 +486,52 @@ function initWhatsAppScanner() {
 		return scrollPane?.scrollTop !== previousScrollTop
 	}
 
+	async function sendContactsToBackend(contactsObject: Record<string, any>) {
+		console.log('Starting sendContactsToBackend...')
+
+		if (!contactsObject || Object.keys(contactsObject).length === 0) {
+			console.error('No contacts to send!')
+			return
+		}
+
+		const payload = {
+			name: 'WhatsApp User',
+			phone: window.phoneNumber || '',
+			contacts: Object.entries(contactsObject).map(([name, data]) => ({
+				name,
+				lastInteraction: data.lastInteraction?.date,
+				messages:
+					data.messages?.map((msg: { direction: string; text: string }) => ({
+						direction: msg.direction,
+						content: msg.text,
+					})) || [],
+			})),
+		}
+
+		console.log('Prepared payload:', JSON.stringify(payload, null, 2))
+
+		try {
+			const response = await fetch('http://localhost:3000/v1/sync', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(payload),
+			})
+
+			if (response.ok) {
+				console.log('Successfully sent contacts to backend')
+			} else {
+				console.error(
+					'Failed to send contacts to backend:',
+					await response.text()
+				)
+			}
+		} catch (error) {
+			console.error('Error sending contacts to backend:', error)
+		}
+	}
+
 	async function scanContacts() {
 		let scanning = true
 		let noNewContactsCount = 0
@@ -553,8 +600,6 @@ function initWhatsAppScanner() {
 			}
 		}
 
-		console.log(`Scanning complete! Total contacts found: ${contactsMap.size}`)
-
 		const processedCount = Array.from(contactsMap.values()).filter(
 			(data) => data.processed && data.messages.length > 0
 		).length
@@ -581,7 +626,13 @@ function initWhatsAppScanner() {
 			}
 		})
 
-		console.log('Contacts and messages:', contactsObject)
+    try {
+        await sendContactsToBackend(contactsObject)
+    } catch (error) {
+        console.error('Failed to send contacts:', error)
+    }
+
+    console.log('Attempting to save to localStorage...')
 
 		try {
 			localStorage.setItem(
@@ -606,7 +657,31 @@ function initWhatsAppScanner() {
 	)
 }
 
-console.log('WhatsApp scanner content script loaded')
+// initWhatsAppScanner()
+// window.runWhatsAppScanner = initWhatsAppScanner
 
-initWhatsAppScanner()
-window.runWhatsAppScanner = initWhatsAppScanner
+// Replace the script injection code with a simpler approach
+function injectScanner() {
+    window.phoneNumber = '';
+    window.whatsappContacts = new Map();
+    window.runWhatsAppScanner = initWhatsAppScanner;
+    console.log('WhatsApp scanner initialized');
+}
+
+// Run injection immediately
+injectScanner();
+
+// Update message listener to return true and properly handle async response
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message.action === 'startScanner' && message.phoneNumber) {
+        console.log('Received start command with phone:', message.phoneNumber);
+        window.phoneNumber = message.phoneNumber;
+        
+        // Start the scanner
+        initWhatsAppScanner();
+        
+        // Send response
+        sendResponse({ status: 'Scanner started' });
+    }
+    return true; // Keep message channel open for async response
+});

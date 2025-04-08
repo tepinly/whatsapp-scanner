@@ -10,10 +10,17 @@
 	"background": {
 		"service_worker": "background.js"
 	},
+	"web_accessible_resources": [
+		{
+			"resources": ["content.js"],
+			"matches": ["https://web.whatsapp.com/*"]
+		}
+	],
 	"content_scripts": [
 		{
 			"matches": ["https://web.whatsapp.com/*"],
-			"js": ["content.js"]
+			"js": ["content.js"],
+			"run_at": "document_idle"
 		}
 	]
 }
