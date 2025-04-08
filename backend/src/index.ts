@@ -9,7 +9,7 @@ const server = Fastify({ logger: true })
 await server.register(cors, {
 	origin: [
 		'chrome-extension://*',
-		'http://localhost:3000',
+		'http://localhost:5173',
 		'https://web.whatsapp.com',
 	],
 	methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
