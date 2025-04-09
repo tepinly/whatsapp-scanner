@@ -11,14 +11,14 @@ const server = Fastify({ logger: true })
 
 ;(async () => {
 	const allowedOrigins =
-		process.env.NODE_ENV === 'production'
+		process.env.NODE_ENV === 'development'
 			? [
-					'https://my-whatsapp-sync.fly.dev',
+					'http://localhost:5173',
 					'chrome-extension://*',
 					'https://web.whatsapp.com',
 			  ]
 			: [
-					'http://localhost:5173',
+					'https://my-whatsapp-sync.fly.dev',
 					'chrome-extension://*',
 					'https://web.whatsapp.com',
 			  ]
@@ -30,6 +30,9 @@ const server = Fastify({ logger: true })
 		allowedHeaders: ['Content-Type', 'Authorization'],
 		exposedHeaders: ['Content-Range', 'X-Content-Range'],
 		maxAge: 86400,
+	})
+	server.get('/', async () => {
+		return { status: 'ok' }
 	})
 
 	server.register(contactsRoutesV1, { prefix: '/v1' })
