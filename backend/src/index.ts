@@ -18,7 +18,7 @@ const server = Fastify({ logger: true })
 					'https://web.whatsapp.com',
 			  ]
 			: [
-					'https://my-whatsapp-sync.fly.dev',
+					'https://whatsapp-scanner.fly.dev',
 					'chrome-extension://*',
 					'https://web.whatsapp.com',
 			  ]
