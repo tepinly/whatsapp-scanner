@@ -22,13 +22,7 @@ RUN npm run build
 
 EXPOSE 3000
 
-# Create a startup script
-COPY <<EOF /docker-entrypoint.sh
-#!/bin/sh
-npx prisma migrate deploy
-npm run start
-EOF
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-RUN chmod +x /docker-entrypoint.sh
-
-CMD ["/docker-entrypoint.sh"]
+CMD ["/entrypoint.sh"]
