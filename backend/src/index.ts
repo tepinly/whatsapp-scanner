@@ -9,24 +9,34 @@ const port = +(process.env.PORT ?? 3000)
 
 const server = Fastify({ logger: true })
 
-await server.register(cors, {
-	origin: [
-		'chrome-extension://*',
-		'http://localhost:5173',
-		'https://web.whatsapp.com',
-	],
-	methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-	credentials: true,
-	allowedHeaders: ['Content-Type', 'Authorization'],
-	exposedHeaders: ['Content-Range', 'X-Content-Range'],
-	maxAge: 86400, // 24 hours
-})
+;(async () => {
+	const allowedOrigins =
+		process.env.NODE_ENV === 'production'
+			? [
+					'https://my-whatsapp-sync.fly.dev',
+					'chrome-extension://*',
+					'https://web.whatsapp.com',
+			  ]
+			: [
+					'http://localhost:5173',
+					'chrome-extension://*',
+					'https://web.whatsapp.com',
+			  ]
 
-server.register(contactsRoutesV1, { prefix: '/v1' })
+	await server.register(cors, {
+		origin: allowedOrigins,
+		methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+		credentials: true,
+		allowedHeaders: ['Content-Type', 'Authorization'],
+		exposedHeaders: ['Content-Range', 'X-Content-Range'],
+		maxAge: 86400,
+	})
 
-server.listen({ port, host }, () => {
+	server.register(contactsRoutesV1, { prefix: '/v1' })
+
+	await server.listen({ port, host })
 	console.log(`Server listening on http://${host}:${port}`)
-})
+})()
 
 server.addHook('onClose', async () => {
 	await redis.quit()
